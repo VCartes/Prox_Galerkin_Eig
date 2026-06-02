@@ -6,7 +6,6 @@
 #define SQUARE_SIZE 10.0
 
 
-
 using namespace std;
 using namespace mfem;
 
@@ -168,32 +167,26 @@ real_t inv_sig_indicator(const Vector &x) {
 
 int main(int argc, char *argv[])
 {
-	// 0. Initialize MPI and HYPRE.
+	// Initialize MPI and HYPRE.
+
 	Mpi::Init();
 	int num_procs = Mpi::WorldSize();
 	int myid = Mpi::WorldRank();
 	Hypre::Init();
 
-	// 1. Parse command-line options.
-	int ref_levels = 5;
+	// Parse command-line options.
+
+	int n_eig = 2;
 	int order = 2;
 	real_t alpha = 1.0;
 	real_t epsilon = 1e-3;
-	real_t vol_fraction = 0.5;
 	int max_it = 1000;
-	real_t itol = 1e-1;
 	real_t ntol = 1e-4;
-	real_t rho_min = 1e-6;
-	real_t lambda = 1.0;
-	real_t mu = 1.0;
 	bool glvis_visualization = true;
-	bool paraview_output = false;
-
-	int n_eig = 5;
 
 	OptionsParser args(argc, argv);
-	args.AddOption(&ref_levels, "-r", "--refine",
-			"Number of times to refine the mesh uniformly.");
+	args.AddOption(&n_eig, "-e", "--eigenvalue",
+			"Number of eigenvalue to be optimized");
 	args.AddOption(&order, "-o", "--order",
 			"Order (degree) of the finite elements.");
 	args.AddOption(&alpha, "-alpha", "--alpha-step-length",
@@ -204,22 +197,10 @@ int main(int argc, char *argv[])
 			"Maximum number of gradient descent iterations.");
 	args.AddOption(&ntol, "-ntol", "--rel-tol",
 			"Normalized exit tolerance.");
-	args.AddOption(&itol, "-itol", "--abs-tol",
-			"Increment exit tolerance.");
-	args.AddOption(&vol_fraction, "-vf", "--volume-fraction",
-			"Volume fraction for the material density.");
-	args.AddOption(&lambda, "-lambda", "--lambda",
-			"Lamé constant λ.");
-	args.AddOption(&mu, "-mu", "--mu",
-			"Lamé constant μ.");
-	args.AddOption(&rho_min, "-rmin", "--psi-min",
-			"Minimum of density coefficient.");
 	args.AddOption(&glvis_visualization, "-vis", "--visualization", "-no-vis",
 			"--no-visualization",
 			"Enable or disable GLVis visualization.");
-	args.AddOption(&paraview_output, "-pv", "--paraview", "-no-pv",
-			"--no-paraview",
-			"Enable or disable ParaView output.");
+
 	args.Parse();
 	if (!args.Good())
 	{
@@ -365,14 +346,14 @@ int main(int argc, char *argv[])
 
 		lobpcg->GetEigenvalues(eigenvalues);
 
-		cout << "Eig: " << eigenvalues[0] << ", " << eigenvalues[1] << ", " << eigenvalues[2] << endl;
+		// cout << "Eig: " << eigenvalues[0] << ", " << eigenvalues[1] << ", " << eigenvalues[2] << endl;
 		cout << "Target: " << eigenvalues[n_eig-1] << endl;
 
 		u = lobpcg->GetEigenvector(n_eig-1);
 		real_t m_norm_u = m.InnerProduct(u, u);
 		u /= m_norm_u;
 
-		lambda = eigenvalues[n_eig-1];
+		real_t lambda = eigenvalues[n_eig-1];
 
 
 		// GRADIENT
@@ -412,10 +393,9 @@ int main(int argc, char *argv[])
 			<< "solution\n" << *pmesh << u << flush
 			<< "window_title 'u'" << endl;
 
-		char c;
-		cout << "Next" << endl;
-		//cin >> c;
+		cout << "End of step" << endl;
 
+		// Clean up
 		delete A;
 		delete M;
 		delete euc;
